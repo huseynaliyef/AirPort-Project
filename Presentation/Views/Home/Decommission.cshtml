@@ -1,0 +1,22 @@
+﻿@using Data.Entities;
+@model PortOne;
+
+@{
+    ViewData["Title"] = "Decommission";
+}
+
+<h1>Decommission</h1>
+<form asp-controller="Home" asp-action="Decommission" method="post">
+    <div class="input-group mb-3" style="display:none;">
+        <label for="inputIdentifier" class="visually-hidden">Identifier</label>
+        <input type="text" class="form-control" id="inputIdentifier" placeholder="Identifier" name="Identifier" value="@Model.Identifier">
+    </div>
+    <div class="input-group mb-3">
+        <span class="input-group-text">EffectiveDate</span>
+        <input type="datetime-local" name="EffectiveDate" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" />
+    </div>
+
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary mb-3">Do</button>
+    </div>
+</form>

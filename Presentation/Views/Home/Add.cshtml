@@ -1,0 +1,57 @@
+﻿@model Business.DTOs.PortAddDTO
+@using Data.Entities;
+@{
+    ViewData["Title"] = "Add";
+}
+
+<h1>Add</h1>
+
+<hr />
+<form class="row g-3" asp-action="Add" asp-controller="Home" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="input-group mb-3">
+        <label for="inputName" class="visually-hidden">Name</label>
+        <input type="text" class="form-control" id="inputName" placeholder="Name" name="Name">
+    </div>
+
+    <div class="input-group mb-3">
+        <label for="inputLatitude" class="visually-hidden">Latitude</label>
+        <input type="text" class="form-control" id="inputLatitude" placeholder="Latitude" name="Latitude">
+    </div>
+
+    <div class="input-group mb-3">
+        <label for="inputLongitude" class="visually-hidden">Longitude</label>
+        <input type="text" class="form-control" id="inputLongitude" placeholder="Longitude" name="Longitude">
+    </div>
+
+    <div class="input-group mb-3">
+        <span class="input-group-text">CertificationDate</span>
+        <input type="datetime-local" name="CertificationDate" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" />
+    </div>
+
+    <div class="input-group mb-3">
+        <span class="input-group-text">EffectiveDate</span>
+        <input type="datetime-local" name="EffectiveDate" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" />
+    </div>
+
+
+    @* <select class="form-select" aria-label="Default select example" name="Interpretation">
+        @foreach (var project in Enum.GetValues(typeof(Delta)))
+        {
+            <option>@project</option>
+        }
+    </select> *@
+
+
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary mb-3">Add</button>
+    </div>
+
+
+</form>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
