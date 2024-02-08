@@ -32,17 +32,8 @@
 
     <div class="input-group mb-3">
         <span class="input-group-text">EffectiveDate</span>
-        <input type="datetime-local" name="EffectiveDate" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" />
+        <input type="datetime-local" name="EffectiveDate" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
     </div>
-
-
-    @* <select class="form-select" aria-label="Default select example" name="Interpretation">
-        @foreach (var project in Enum.GetValues(typeof(Delta)))
-        {
-            <option>@project</option>
-        }
-    </select> *@
-
 
     <div class="col-auto">
         <button type="submit" class="btn btn-primary mb-3">Add</button>

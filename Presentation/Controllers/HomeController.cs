@@ -1,5 +1,6 @@
 ﻿using Business.Abstractions;
 using Business.DTOs;
+using Business.DTOs.Viewmodels;
 using Data.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,23 +17,26 @@ namespace Presentation.Controllers
             _portRepository = portRepository;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(PortSearchDTO model)
         {
-            return View();
-        }
-
-        public async Task<IActionResult> Search(PortSearchDTO model)
-        {
-            var SearchedPort = new List<PortOne>();
-            if (model.State == States.BASELINE)
+            var IndexModel = new IndexViewModel();
+            if(model.effectiveDate == default(DateTime))
             {
-                SearchedPort = await _portRepository.GetPortByBaseLine(model);
+                model = new PortSearchDTO { effectiveDate = DateTime.Now};
+                IndexModel.SearchedPorts = await _portRepository.GetPortBySnapShot(model);
+                IndexModel.SearchDate = model.effectiveDate;
             }
-            else if(model.State == States.SNAPSHOT)
+            else if (model.State == States.BASELINE)
             {
-                SearchedPort = await _portRepository.GetPortBySnapShot(model);
+                IndexModel.SearchedPorts = await _portRepository.GetPortByBaseLine(model);
+                IndexModel.SearchDate = model.effectiveDate;
             }
-            return View(SearchedPort);
+            else if (model.State == States.SNAPSHOT)
+            {
+                IndexModel.SearchedPorts = await _portRepository.GetPortBySnapShot(model);
+                IndexModel.SearchDate = model.effectiveDate;
+            }
+            return View(IndexModel);
         }
 
         public async Task<IActionResult> Add()

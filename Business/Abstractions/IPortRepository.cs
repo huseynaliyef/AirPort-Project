@@ -15,8 +15,8 @@ namespace Business.Abstractions
         Task<List<PortOne>> GetPorts();
         Task<PortOne> GetPortById(int Id);
         Task EditPort(PortEditDTO model);
-        Task<List<PortOne>> GetPortByBaseLine(PortSearchDTO model);
-        Task<List<PortOne>> GetPortBySnapShot(PortSearchDTO model);
+        Task<List<PortSearchUIDTO>> GetPortByBaseLine(PortSearchDTO model);
+        Task<List<PortSearchUIDTO>> GetPortBySnapShot(PortSearchDTO model);
         Task DecommissionPort(PortDecommissionDTO model);
     }
 }

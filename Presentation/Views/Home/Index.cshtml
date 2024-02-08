@@ -1,18 +1,20 @@
 ﻿@using Business.DTOs
+@using Business.DTOs.Viewmodels
+@using Data.Entities;
 @using System.Collections
-
+@model IndexViewModel
 @{
     ViewData["Title"] = "Home Page";
 }
 
-<form asp-action="Search" asp-controller="Home" method="get">
+<form asp-action="Index" asp-controller="Home" method="get">
 
     <div class="container px-4 text-center">
         <div class="row gx-5">
             <div class="col-10">
                 <div class="p-3">
                     <span class="input-group-text">EffectiveDate</span>
-                    <input type="datetime-local" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" name="EffectiveDate" />
+                    <input type="datetime-local" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" name="EffectiveDate" value="@Model.SearchDate.ToString("yyyy-MM-ddTHH:mm")" />
                 </div>
             </div>
             <div class="col-2">
@@ -37,6 +39,70 @@
     </div>
 
 </form>
+
+
+<!--Merging IndexPage And Searchpage-->
+
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">Identifier</th>
+            <th scope="col">Name</th>
+            <th scope="col">Latitude</th>
+            <th scope="col">Longitude</th>
+            <th scope="col">CertificationDate</th>
+            <th scope="col">SequenceNumber</th>
+            <th scope="col">CorrectionNumber</th>
+            <th scope="col">LTBegin</th>
+            <th scope="col">LTEnd</th>
+            <th scope="col">VTBegin</th>
+            <th scope="col">VTEnd</th>
+            <th scope="col">Interpretation</th>
+            <th scope="col">Edit</th>
+            <th scope="col">Decommission</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.SearchedPorts.Any())
+        {
+            int item = 1;
+            @foreach (var Port in Model.SearchedPorts)
+            {
+                <tr>
+                    <th>@item</th>
+                    <th>@Port.Identifier</th>
+                    <th>@Port.Name</th>
+                    <th>@Port.Latitude</th>
+                    <th>@Port.Longitude</th>
+                    <th>@Port.CertificationDate</th>
+                    <th>@Port.SequenceNumber</th>
+                    <th>@Port.CorrectionNumber</th>
+                    <th>@Port.LTBegin</th>
+                    <th>@Port.LTEnd</th>
+                    <th>@Port.VTBegin</th>
+                    <th>@Port.VTEnd</th>
+                    <th id="InterpretationTh">@Port.Interpretation</th>
+
+                    <form asp-controller="Home" asp-action="Edit" asp-route-id="@Port.Id" method="get">
+                    <th><button type="submit" class="btn btn-info">Edit</button></th>
+                    </form>
+
+                    @if (Port.Interpretation == Delta.PermDelta)
+                    {
+                        <form asp-controller="Home" asp-action="Decommission" asp-route-id="@Port.Id" method="get" id="decommissionForm">
+                        <th><button type="submit" class="btn btn-danger">Decommission</button></th>
+                        </form>
+                    }
+                </tr>
+                item++;
+            }
+        }
+
+    </tbody>
+</table>
+
 
 
 

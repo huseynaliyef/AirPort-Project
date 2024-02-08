@@ -10,14 +10,13 @@ namespace Business.DTOs
 {
     public class PortAddDTO
     {
-        [Required]
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         public double? Latitude { get; set; }
 
         public double? Longitude { get; set; }
-        [Required]
-        public DateTime CertificationDate { get; set; }
+
+        public DateTime? CertificationDate { get; set; }
         [Required]
         public DateTime EffectiveDate { get; set; }
     }

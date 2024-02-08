@@ -180,10 +180,10 @@ namespace Business.Services
 
         }
 
-        public async Task<List<PortOne>> GetPortByBaseLine(PortSearchDTO model)
+        public async Task<List<PortSearchUIDTO>> GetPortByBaseLine(PortSearchDTO model)
         {
 
-            List<PortOne> SearchedPorts = new List<PortOne>();
+            List<PortSearchUIDTO> SearchedPorts = new List<PortSearchUIDTO>();
             PortOne? SearchedPort = null;
 
             var groupedByIdentifier = await _dbContext.Ports.GroupBy(item => item.Identifier).ToListAsync();
@@ -272,7 +272,23 @@ namespace Business.Services
 
                     if (SearchedPort.LTEnd > model.effectiveDate || SearchedPort.LTEnd == null)
                     {
-                        SearchedPorts.Add(SearchedPort);
+                        SearchedPorts.Add(
+                            new PortSearchUIDTO
+                            {
+                                Id = SearchedPort.Id,
+                                Identifier = SearchedPort.Identifier,
+                                Name = SearchedPort.Name,
+                                Latitude = SearchedPort.Latitude,
+                                Longitude = SearchedPort.Longitude,
+                                CertificationDate = SearchedPort.CertificationDate,
+                                SequenceNumber = SearchedPort.SequenceNumber,
+                                CorrectionNumber = SearchedPort.CorrectionNumber,
+                                LTBegin = SearchedPort.LTBegin,
+                                LTEnd = SearchedPort.LTEnd,
+                                VTBegin = SearchedPort.VTBegin,
+                                VTEnd = SearchedPort.VTEnd,
+                                Interpretation = SearchedPort.Interpretation,
+                            });
                     }
                 }
 
@@ -282,9 +298,9 @@ namespace Business.Services
 
         }
 
-        public async Task<List<PortOne>> GetPortBySnapShot(PortSearchDTO model)
+        public async Task<List<PortSearchUIDTO>> GetPortBySnapShot(PortSearchDTO model)
         {
-            List<PortOne> SearchedPorts = new List<PortOne>();
+            List<PortSearchUIDTO> SearchedPorts = new List<PortSearchUIDTO>();
             PortOne? SearchedPort = null;
 
             var groupedByIdentifier = await _dbContext.Ports.GroupBy(item => item.Identifier).ToListAsync();
@@ -368,23 +384,35 @@ namespace Business.Services
                     if(verifyTempDeltaPort != null)
                         SearchedPort.VTEnd = verifyTempDeltaPort.VTEnd;
 
-                    //else
-                    //    SearchedPort.VTEnd = VTBDateGreatFromEffectiveDatePort != null ? VTBDateGreatFromEffectiveDatePort.VTBegin : null;
 
                     var maxSNPort = PortIdentityList[j].Where(x => x.Interpretation == Delta.PermDelta).OrderByDescending(x => x.SequenceNumber).FirstOrDefault();
                     
                     if(maxSNPort.LTEnd != null)
                         SearchedPort.LTEnd = maxSNPort.LTEnd;
 
-                    //if (SearchedPort.LTEnd != null)
-                    //    SearchedPort.VTEnd = SearchedPort.LTEnd;
 
                     if (SearchedPort.LTEnd > model.effectiveDate || SearchedPort.LTEnd == null)
                     {
-                        SearchedPorts.Add(SearchedPort);
+
+                        SearchedPorts.Add(
+                            new PortSearchUIDTO 
+                            { 
+                                Id = SearchedPort.Id,
+                                Identifier = SearchedPort.Identifier,
+                                Name = SearchedPort.Name,
+                                Latitude = SearchedPort.Latitude,
+                                Longitude = SearchedPort.Longitude,
+                                CertificationDate = SearchedPort.CertificationDate,
+                                SequenceNumber = SearchedPort.SequenceNumber,
+                                CorrectionNumber = SearchedPort.CorrectionNumber,
+                                LTBegin = SearchedPort.LTBegin,
+                                LTEnd = SearchedPort.LTEnd,
+                                VTBegin = SearchedPort.VTBegin,
+                                VTEnd = SearchedPort.VTEnd,
+                                Interpretation = SearchedPort.Interpretation,
+                            });
                     }
 
-                    //SearchedPorts.Add(SearchedPort);
                 }
 
             }

@@ -13,7 +13,9 @@ namespace Data.DAL
         public AirPortDbContext(DbContextOptions<AirPortDbContext> options): base(options)
         {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+            
         }
+
 
         public DbSet<PortOne> Ports { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
