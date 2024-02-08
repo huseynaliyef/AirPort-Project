@@ -76,7 +76,8 @@ namespace Presentation.Controllers
         public async Task<IActionResult> Decommission(int Id)
         {
             var Port = await _portRepository.GetPortById(Id);
-            return View(Port);
+            var portModel = new DecommissionViewModel { Identifier = Port.Identifier };
+            return View(portModel);
         }
 
         [HttpPost]
