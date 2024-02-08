@@ -57,7 +57,8 @@ namespace Presentation.Controllers
         public async Task<IActionResult> Edit(int Id)
         {
             var Port = await _portRepository.GetPortById(Id);
-            return View(Port);
+            var PortModel = new EditViewModel { Identifier = Port.Identifier, VTBegin = Port.VTBegin, VTEnd = Port.VTEnd, Interpretation = (Delta)Port.Interpretation };
+            return View(PortModel);
         }
 
         [HttpPost]
