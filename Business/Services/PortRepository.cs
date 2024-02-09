@@ -124,60 +124,8 @@ namespace Business.Services
                 }
             }
 
-
             await _dbContext.Ports.AddAsync(newEdit);
             await _dbContext.SaveChangesAsync();
-
-
-
-
-
-
-            ////////////////////////////////////////////////////////////////////////////////////////////////
-            //var PortList = await _dbContext.Ports.Where(x=>x.Identifier == model.Identifier).ToListAsync();
-
-            //int maxSN = 0;
-
-            //for(int i = 0; i < PortList.Count; i++)
-            //{
-            //    if(PortList[i].SequenceNumber > maxSN)
-            //        maxSN = PortList[i].SequenceNumber;
-
-            //}
-            //var EditedPort = PortList.Where(x => x.SequenceNumber == maxSN).OrderByDescending(x => x.CorrectionNumber).FirstOrDefault();
-
-
-            //var newEdit = new PortOne
-            //{
-            //    Identifier = model.Identifier,
-            //    Name = model.Name,
-            //    Latitude = model.Latitude,
-            //    Longitude = model.Longitude,
-            //    CertificationDate = EditedPort.CertificationDate,
-            //    SequenceNumber = EditedPort.SequenceNumber,
-            //    CorrectionNumber = EditedPort.CorrectionNumber,
-            //    LTBegin = EditedPort.LTBegin,
-            //    LTEnd = EditedPort.LTEnd,
-            //    VTBegin = EditedPort.VTBegin,
-            //    VTEnd = EditedPort.VTEnd,
-            //    Interpretation = model.Interpretation
-            //};
-
-            //if (EditedPort.VTBegin == model.EffectiveDate)
-            //{
-            //    newEdit.CorrectionNumber = EditedPort.CorrectionNumber + 1;
-            //}
-            //else
-            //{
-            //    newEdit.VTBegin = model.EffectiveDate;
-            //    newEdit.SequenceNumber = EditedPort.SequenceNumber + 1;
-            //    newEdit.CorrectionNumber = 0;
-            //}
-
-
-            //await _dbContext.Ports.AddAsync(newEdit);
-            //await _dbContext.SaveChangesAsync();
-
         }
 
         public async Task<List<PortSearchUIDTO>> GetPortByBaseLine(PortSearchDTO model)
