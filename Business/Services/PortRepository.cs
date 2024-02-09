@@ -124,299 +124,179 @@ namespace Business.Services
                 }
             }
 
-
             await _dbContext.Ports.AddAsync(newEdit);
             await _dbContext.SaveChangesAsync();
 
-
-
-
-
-
-            ////////////////////////////////////////////////////////////////////////////////////////////////
-            //var PortList = await _dbContext.Ports.Where(x=>x.Identifier == model.Identifier).ToListAsync();
-
-            //int maxSN = 0;
-
-            //for(int i = 0; i < PortList.Count; i++)
-            //{
-            //    if(PortList[i].SequenceNumber > maxSN)
-            //        maxSN = PortList[i].SequenceNumber;
-
-            //}
-            //var EditedPort = PortList.Where(x => x.SequenceNumber == maxSN).OrderByDescending(x => x.CorrectionNumber).FirstOrDefault();
-
-
-            //var newEdit = new PortOne
-            //{
-            //    Identifier = model.Identifier,
-            //    Name = model.Name,
-            //    Latitude = model.Latitude,
-            //    Longitude = model.Longitude,
-            //    CertificationDate = EditedPort.CertificationDate,
-            //    SequenceNumber = EditedPort.SequenceNumber,
-            //    CorrectionNumber = EditedPort.CorrectionNumber,
-            //    LTBegin = EditedPort.LTBegin,
-            //    LTEnd = EditedPort.LTEnd,
-            //    VTBegin = EditedPort.VTBegin,
-            //    VTEnd = EditedPort.VTEnd,
-            //    Interpretation = model.Interpretation
-            //};
-
-            //if (EditedPort.VTBegin == model.EffectiveDate)
-            //{
-            //    newEdit.CorrectionNumber = EditedPort.CorrectionNumber + 1;
-            //}
-            //else
-            //{
-            //    newEdit.VTBegin = model.EffectiveDate;
-            //    newEdit.SequenceNumber = EditedPort.SequenceNumber + 1;
-            //    newEdit.CorrectionNumber = 0;
-            //}
-
-
-            //await _dbContext.Ports.AddAsync(newEdit);
-            //await _dbContext.SaveChangesAsync();
-
         }
 
-        public async Task<List<PortSearchUIDTO>> GetPortByBaseLine(PortSearchDTO model)
+        public async Task<List<PortSearchUIDTO>> GetPorts(PortSearchDTO model)
         {
-
-            List<PortSearchUIDTO> SearchedPorts = new List<PortSearchUIDTO>();
-            PortOne? SearchedPort = null;
+            List<PortSearchUIDTO> searchedPorts = new List<PortSearchUIDTO>();
+            PortOne? searchedPort = null;
 
             var groupedByIdentifier = await _dbContext.Ports.GroupBy(item => item.Identifier).ToListAsync();
-            var count = groupedByIdentifier.Count;
+            if (groupedByIdentifier.Count == 0)
+                return searchedPorts;
+
             List<List<PortOne>> PortIdentityList = new List<List<PortOne>>();
 
             for (int i = 0; i < groupedByIdentifier.Count; i++)
             {
-                var ListPort = await _dbContext.Ports.Where(x => x.Identifier == groupedByIdentifier[i].Key && x.Interpretation == Delta.PermDelta).ToListAsync();
+                var ListPort = new List<PortOne>();
+                ListPort = await _dbContext.Ports.Where(x => x.Identifier == groupedByIdentifier[i].Key).ToListAsync();
                 PortIdentityList.Add(ListPort);
             }
 
             for (int j = 0; j < PortIdentityList.Count; j++)
             {
-                var Ports = PortIdentityList[j].Where(x => x.VTBegin <= model.effectiveDate).OrderBy(x => x.VTBegin).ToList();
-                DateTime TempDate = model.effectiveDate;
+                var Ports = new List<PortOne>();
+                if (model.State == States.BASELINE)
+                {
+                    Ports = PortIdentityList[j].Where(x => x.VTBegin <= model.effectiveDate && x.Interpretation == Delta.PermDelta).OrderBy(x => x.VTBegin).ToList();
+                }
+
+                if(model.State == States.SNAPSHOT)
+                {
+                    Ports = PortIdentityList[j].Where(x => x.VTBegin <= model.effectiveDate).OrderBy(x => x.VTBegin).ToList();
+                }
+                DateTime VerifyDate = model.effectiveDate;
                 for (int i = 0; i < Ports.Count; i++)
                 {
                     if (Ports[i].VTBegin > model.effectiveDate)
                         continue;
-                    if (Ports[i].VTBegin < model.effectiveDate)
-                        TempDate = Ports[i].VTBegin;
+
+                    if (model.State == States.SNAPSHOT)
+                    {
+                        if(Ports[i].Interpretation == Delta.TempDelta && Ports[i].VTBegin < model.effectiveDate && Ports[i].VTEnd > model.effectiveDate || Ports[i].VTEnd == model.effectiveDate)
+                            VerifyDate = Ports[i].VTBegin;
+                        if(Ports[i].Interpretation == Delta.PermDelta && Ports[i].VTBegin < model.effectiveDate)
+                            VerifyDate = Ports[i].VTBegin;
+                    }
+
+                    
+                    if (model.State == States.BASELINE && Ports[i].VTBegin < model.effectiveDate)
+                        VerifyDate = Ports[i].VTBegin;
+
                     if (Ports[i].VTBegin == model.effectiveDate)
                     {
-                        TempDate = Ports[i].VTBegin;
+                        VerifyDate = Ports[i].VTBegin;
                         break;
                     }
                 }
 
-                var VerifyTempDAtePorts = await _dbContext.Ports.Where(x => x.VTBegin == TempDate).ToListAsync();
+                var verifyDatePorts = await _dbContext.Ports.Where(x => x.VTBegin == VerifyDate).ToListAsync();
+                var verifyTempDeltaPort = await _dbContext.Ports.Where(x => x.VTBegin <= VerifyDate && x.VTEnd >= VerifyDate && x.Interpretation == Delta.TempDelta).FirstOrDefaultAsync();
 
 
-                var LastSearchdPorts = VerifyTempDAtePorts.OrderByDescending(x => x.CorrectionNumber).ToList();
+                var LastSearchdPorts = verifyDatePorts.OrderByDescending(x => x.CorrectionNumber).ToList();
 
 
                 if (LastSearchdPorts.Any())
                 {
-                    SearchedPort = LastSearchdPorts.FirstOrDefault();
-                    var VTBDateGreatFromEffectiveDatePort = await _dbContext.Ports.Where(x => x.VTBegin > SearchedPort.VTBegin).OrderBy(x => x.VTBegin).ThenBy(x => x.CorrectionNumber).FirstOrDefaultAsync();
+                    if(model.State == States.BASELINE)
+                        searchedPort = LastSearchdPorts.FirstOrDefault();
 
-                    if (SearchedPort.Name == null)
+                    if(model.State == States.SNAPSHOT)
+                        searchedPort = verifyTempDeltaPort != null ? verifyTempDeltaPort : LastSearchdPorts.FirstOrDefault();
+
+                    var VTBDateGreatFromEffectiveDatePort = await _dbContext.Ports.Where(x => x.VTBegin > searchedPort.VTBegin).OrderBy(x => x.VTBegin).ThenBy(x => x.CorrectionNumber).FirstOrDefaultAsync();
+
+                    if (searchedPort.Name == null)
                     {
                         foreach (var d in Ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
                         {
                             if (d.Name != null)
                             {
-                                SearchedPort.Name = d.Name;
+                                searchedPort.Name = d.Name;
                                 break;
 
                             }
                         }
                     }
 
-                    if (SearchedPort.Latitude == null)
+                    if (searchedPort.Latitude == null)
                     {
                         foreach (var d in Ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
                         {
                             if (d.Latitude != null)
                             {
-                                SearchedPort.Latitude = d.Latitude;
+                                searchedPort.Latitude = d.Latitude;
                                 break;
                             }
                         }
                     }
 
-                    if (SearchedPort.Longitude == null)
+                    if (searchedPort.Longitude == null)
                     {
                         foreach (var d in Ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
                         {
                             if (d.Longitude != null)
                             {
-                                SearchedPort.Longitude = d.Longitude;
+                                searchedPort.Longitude = d.Longitude;
                                 break;
                             }
                         }
                     }
 
-                    var maxSNPort = PortIdentityList[j].Where(x=>x.Interpretation == Delta.PermDelta).OrderByDescending(x => x.SequenceNumber).FirstOrDefault();
-                    
-
-                    SearchedPort.VTEnd = VTBDateGreatFromEffectiveDatePort != null ? VTBDateGreatFromEffectiveDatePort.VTBegin : null;
-
-                    SearchedPort.LTEnd = maxSNPort.LTEnd;
-                    if (SearchedPort.LTEnd != null)
-                        SearchedPort.VTEnd = SearchedPort.LTEnd;
-
-                    if (SearchedPort.LTEnd > model.effectiveDate || SearchedPort.LTEnd == null)
+                    if(model.State == States.BASELINE)
                     {
-                        SearchedPorts.Add(
+                        var maxSNPort = PortIdentityList[j].Where(x => x.Interpretation == Delta.PermDelta).OrderByDescending(x => x.SequenceNumber).FirstOrDefault();
+
+
+                        searchedPort.VTEnd = VTBDateGreatFromEffectiveDatePort != null && VTBDateGreatFromEffectiveDatePort.Interpretation == Delta.PermDelta ? VTBDateGreatFromEffectiveDatePort.VTBegin : null;
+
+                        searchedPort.LTEnd = maxSNPort.LTEnd;
+                        if (searchedPort.LTEnd != null)
+                            searchedPort.VTEnd = searchedPort.LTEnd;
+
+                    }
+
+                    if(model.State == States.SNAPSHOT)
+                    {
+                        if (verifyTempDeltaPort != null)
+                            searchedPort.VTEnd = verifyTempDeltaPort.VTEnd;
+
+
+                        var maxSNPort = PortIdentityList[j].Where(x => x.Interpretation == Delta.PermDelta).OrderByDescending(x => x.SequenceNumber).FirstOrDefault();
+
+                        if (maxSNPort.LTEnd != null)
+                            searchedPort.LTEnd = maxSNPort.LTEnd;
+                    }
+
+
+                    if (searchedPort.LTEnd > model.effectiveDate || searchedPort.LTEnd == null)
+                    {
+                        var version = "";
+                        if (searchedPort.Interpretation == Delta.PermDelta)
+                        {
+                            version = $"{searchedPort.SequenceNumber}.{searchedPort.CorrectionNumber} BaseLine from {searchedPort.VTBegin}";
+
+                            if (searchedPort.VTEnd != null)
+                                version += $" to {searchedPort.VTEnd}"; 
+
+                        }
+                        if(searchedPort.Interpretation == Delta.TempDelta)
+                        {
+                            version = $"{searchedPort.SequenceNumber}.{searchedPort.CorrectionNumber} SnapShot from {searchedPort.VTBegin} to {searchedPort.VTEnd}";
+                        }
+
+                        searchedPorts.Add(
                             new PortSearchUIDTO
                             {
-                                Id = SearchedPort.Id,
-                                Identifier = SearchedPort.Identifier,
-                                Name = SearchedPort.Name,
-                                Latitude = SearchedPort.Latitude,
-                                Longitude = SearchedPort.Longitude,
-                                CertificationDate = SearchedPort.CertificationDate,
-                                SequenceNumber = SearchedPort.SequenceNumber,
-                                CorrectionNumber = SearchedPort.CorrectionNumber,
-                                LTBegin = SearchedPort.LTBegin,
-                                LTEnd = SearchedPort.LTEnd,
-                                VTBegin = SearchedPort.VTBegin,
-                                VTEnd = SearchedPort.VTEnd,
-                                Interpretation = SearchedPort.Interpretation,
+                                Id = searchedPort.Id,
+                                Identifier = searchedPort.Identifier,
+                                Name = searchedPort.Name,
+                                Latitude = searchedPort.Latitude,
+                                Longitude = searchedPort.Longitude,
+                                CertificationDate = searchedPort.CertificationDate,
+                                Version = version,
                             });
                     }
                 }
 
             }
 
-            return SearchedPorts;
-
-        }
-
-        public async Task<List<PortSearchUIDTO>> GetPortBySnapShot(PortSearchDTO model)
-        {
-            List<PortSearchUIDTO> SearchedPorts = new List<PortSearchUIDTO>();
-            PortOne? SearchedPort = null;
-
-            var groupedByIdentifier = await _dbContext.Ports.GroupBy(item => item.Identifier).ToListAsync();
-            var data = groupedByIdentifier[0].Key;
-            var count = groupedByIdentifier.Count;
-            List<List<PortOne>> PortIdentityList = new List<List<PortOne>>();
-
-            for (int i = 0; i < groupedByIdentifier.Count; i++)
-            {
-                var ListPort = await _dbContext.Ports.Where(x => x.Identifier == groupedByIdentifier[i].Key).ToListAsync();
-                PortIdentityList.Add(ListPort);
-            }
-
-            for (int j = 0; j < PortIdentityList.Count; j++)
-            {
-                var Ports = PortIdentityList[j].Where(x => x.VTBegin <= model.effectiveDate).OrderBy(x => x.VTBegin).ToList();
-                DateTime PermDate = model.effectiveDate;
-                for (int i = 0; i < Ports.Count; i++)
-                {
-                    if (Ports[i].VTBegin > model.effectiveDate)
-                        continue;
-                    if (Ports[i].VTBegin < model.effectiveDate)
-                        PermDate = Ports[i].VTBegin;
-                    if (Ports[i].VTBegin == model.effectiveDate)
-                    {
-                        PermDate = Ports[i].VTBegin;
-                        break;
-                    }
-                }
-
-                var VerifyPorts = await _dbContext.Ports.Where(x => x.VTBegin == PermDate).ToListAsync();
-
-                var verifyTempDeltaPort = await _dbContext.Ports.Where(x=>x.VTBegin <= PermDate && x.VTEnd >= PermDate && x.Interpretation == Delta.TempDelta).FirstOrDefaultAsync();
-
-                var LastSearchdPorts = VerifyPorts.OrderByDescending(x => x.CorrectionNumber).ToList();
-
-
-                if (LastSearchdPorts.Any())
-                {
-                    SearchedPort = verifyTempDeltaPort != null ? verifyTempDeltaPort : LastSearchdPorts.FirstOrDefault();
-                    var VTBDateGreatFromEffectiveDatePort = await _dbContext.Ports.Where(x => x.VTBegin > SearchedPort.VTBegin).OrderBy(x => x.VTBegin).ThenBy(x => x.CorrectionNumber).FirstOrDefaultAsync();
-
-                    if (SearchedPort.Name == null)
-                    {
-                        foreach (var d in Ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
-                        {
-                            if (d.Name != null)
-                            {
-                                SearchedPort.Name = d.Name;
-                                break;
-
-                            }
-                        }
-                    }
-
-                    if (SearchedPort.Latitude == null)
-                    {
-                        var OrderedByDeceddingPorts = Ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber).ToList();
-                        foreach (var d in OrderedByDeceddingPorts)
-                        {
-                            if (d.Latitude != null)
-                            {
-                                SearchedPort.Latitude = d.Latitude;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (SearchedPort.Longitude == null)
-                    {
-                        foreach (var d in Ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
-                        {
-                            if (d.Longitude != null)
-                            {
-                                SearchedPort.Longitude = d.Longitude;
-                                break;
-                            }
-                        }
-                    }
-
-                    if(verifyTempDeltaPort != null)
-                        SearchedPort.VTEnd = verifyTempDeltaPort.VTEnd;
-
-
-                    var maxSNPort = PortIdentityList[j].Where(x => x.Interpretation == Delta.PermDelta).OrderByDescending(x => x.SequenceNumber).FirstOrDefault();
-                    
-                    if(maxSNPort.LTEnd != null)
-                        SearchedPort.LTEnd = maxSNPort.LTEnd;
-
-
-                    if (SearchedPort.LTEnd > model.effectiveDate || SearchedPort.LTEnd == null)
-                    {
-
-                        SearchedPorts.Add(
-                            new PortSearchUIDTO 
-                            { 
-                                Id = SearchedPort.Id,
-                                Identifier = SearchedPort.Identifier,
-                                Name = SearchedPort.Name,
-                                Latitude = SearchedPort.Latitude,
-                                Longitude = SearchedPort.Longitude,
-                                CertificationDate = SearchedPort.CertificationDate,
-                                SequenceNumber = SearchedPort.SequenceNumber,
-                                CorrectionNumber = SearchedPort.CorrectionNumber,
-                                LTBegin = SearchedPort.LTBegin,
-                                LTEnd = SearchedPort.LTEnd,
-                                VTBegin = SearchedPort.VTBegin,
-                                VTEnd = SearchedPort.VTEnd,
-                                Interpretation = SearchedPort.Interpretation,
-                            });
-                    }
-
-                }
-
-            }
-            return SearchedPorts;
+            return searchedPorts;
         }
 
         public async Task DecommissionPort(PortDecommissionDTO model)

@@ -11,7 +11,5 @@ namespace Business.DTOs.Viewmodels
     {
         public Guid Identifier { get; set; }
         public DateTime VTBegin {  get; set; }
-        public DateTime? VTEnd { get; set; }
-        public Delta Interpretation {  get; set; }
     }
 }

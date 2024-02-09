@@ -38,22 +38,13 @@
 
     <div id ="endEDBox" class="input-group mb-3" style="display: none;">
         <span class="input-group-text">End EffectiveDate</span>
-        <input type="datetime-local" name="EndEffectiveDate" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" value=@Model.VTEnd?.ToString("yyyy-MM-ddTHH:mm") />
+        <input type="datetime-local" name="EndEffectiveDate" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" />
     </div>
 
     <select class="form-select" aria-label="Default select example" name="Interpretation" id="optionBox" onchange="showInputBox()">
         @foreach (Delta project in Enum.GetValues(typeof(Delta)))
         {
-            var inter = Model.Interpretation;
-            if (project == inter)
-            {
-                <option selected>@project</option>
-
-            }
-            else
-            {
-                <option>@project</option>
-            }
+            <option>@project</option>
         }
     </select>
 

@@ -9,5 +9,6 @@ namespace Business.DTOs.Viewmodels
     public class DecommissionViewModel
     {
         public Guid Identifier {  get; set; }
+        public DateTime searchedDate { get; set; }
     }
 }

@@ -23,17 +23,12 @@ namespace Presentation.Controllers
             if(model.effectiveDate == default(DateTime))
             {
                 model = new PortSearchDTO { effectiveDate = DateTime.Now};
-                IndexModel.SearchedPorts = await _portRepository.GetPortBySnapShot(model);
+                IndexModel.SearchedPorts = await _portRepository.GetPorts(model);
                 IndexModel.SearchDate = model.effectiveDate;
             }
-            else if (model.State == States.BASELINE)
+            else
             {
-                IndexModel.SearchedPorts = await _portRepository.GetPortByBaseLine(model);
-                IndexModel.SearchDate = model.effectiveDate;
-            }
-            else if (model.State == States.SNAPSHOT)
-            {
-                IndexModel.SearchedPorts = await _portRepository.GetPortBySnapShot(model);
+                IndexModel.SearchedPorts = await _portRepository.GetPorts(model);
                 IndexModel.SearchDate = model.effectiveDate;
             }
             return View(IndexModel);
@@ -54,14 +49,14 @@ namespace Presentation.Controllers
             return RedirectToAction("Index");
         }
 
-        public async Task<IActionResult> Edit(int Id)
+        [HttpGet("Edit/{Identifier}/{searchedDate}")]
+        public IActionResult Edit(Guid Identifier, DateTime searchedDate)
         {
-            var Port = await _portRepository.GetPortById(Id);
-            var PortModel = new EditViewModel { Identifier = Port.Identifier, VTBegin = Port.VTBegin, VTEnd = Port.VTEnd, Interpretation = (Delta)Port.Interpretation };
+            var PortModel = new EditViewModel { Identifier = Identifier, VTBegin = searchedDate};
             return View(PortModel);
         }
 
-        [HttpPost]
+        [HttpPost("Edit/{Identifier}/{searchedDate}")]
         public async Task<IActionResult> Edit(PortEditDTO model)
         {
             if(ModelState.IsValid) 
@@ -73,14 +68,14 @@ namespace Presentation.Controllers
         }
 
 
-        public async Task<IActionResult> Decommission(int Id)
+        [HttpGet("Decommission/{Identifier}/{searchedDate}")]
+        public async Task<IActionResult> Decommission(Guid Identifier, DateTime searchedDate)
         {
-            var Port = await _portRepository.GetPortById(Id);
-            var portModel = new DecommissionViewModel { Identifier = Port.Identifier };
+            var portModel = new DecommissionViewModel { Identifier = Identifier, searchedDate = searchedDate};
             return View(portModel);
         }
 
-        [HttpPost]
+        [HttpPost("Decommission/{Identifier}/{searchedDate}")]
         public async Task<IActionResult> Decommission(PortDecommissionDTO model)
         {
             await _portRepository.DecommissionPort(model);
