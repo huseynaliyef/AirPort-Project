@@ -36,24 +36,13 @@ namespace Business.Services
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task<List<PortOne>> GetPorts()
-        {
-            return await _dbContext.Ports.ToListAsync();
-        }
-
-        public async Task<PortOne> GetPortById(int Id)
-        {
-            return await _dbContext.Ports.FindAsync(Id);
-        }
-
         public async Task EditPort(PortEditDTO model)
         {
-
             var PortList = await _dbContext.Ports.Where(x => x.Identifier == model.Identifier).ToListAsync();
             var PortListTemp = await _dbContext.Ports.Where(x => x.Identifier == model.Identifier && x.Interpretation == Delta.TempDelta).ToListAsync();
             
-            int maxSN = GetMaxSqNumber(PortList);
-            int maxSNTemp = GetMaxSqNumber(PortListTemp);
+            int maxSN = GetMaxSequenceNumber(PortList);
+            int maxSNTemp = GetMaxSequenceNumber(PortListTemp);
 
             var EditedPort = PortList.Where(x => x.SequenceNumber == maxSN).OrderByDescending(x => x.CorrectionNumber).FirstOrDefault();
             var EditPortTemp = PortList.Where(x => x.SequenceNumber == maxSNTemp && x.Interpretation == Delta.TempDelta).OrderByDescending(x => x.CorrectionNumber).FirstOrDefault();
@@ -74,7 +63,7 @@ namespace Business.Services
                 Interpretation = model.Interpretation
             };
 
-            SetSNAndCN(model, newEdit, EditPortTemp, EditedPort);
+            SetVersion(model, newEdit, EditPortTemp, EditedPort);
 
             await _dbContext.Ports.AddAsync(newEdit);
             await _dbContext.SaveChangesAsync();
@@ -84,28 +73,23 @@ namespace Business.Services
         public async Task<List<PortSearchUIDTO>> GetPorts(PortSearchDTO model)
         {
             List<PortSearchUIDTO> searchedPorts = new List<PortSearchUIDTO>();
-            PortOne? searchedPort = null;
 
             var groupedByIdentifier = await _dbContext.Ports.GroupBy(item => item.Identifier).ToListAsync();
+
             if (groupedByIdentifier.Count == 0)
                 return searchedPorts;
 
-            List<List<PortOne>> PortIdentityList = new List<List<PortOne>>();
-
             for (int i = 0; i < groupedByIdentifier.Count; i++)
             {
-                var ListPort = new List<PortOne>();
-                ListPort = await _dbContext.Ports.Where(x => x.Identifier == groupedByIdentifier[i].Key).ToListAsync();
-                PortIdentityList.Add(ListPort);
-            }
+                // TODO: Use name conventions for local fields (should start with lower case)
 
-            for (int j = 0; j < PortIdentityList.Count; j++)
-            {
-
-                var Ports = GetPortsListForState(model, PortIdentityList[j]);
+                // TODO: Use filter in database level
+                var ListPort = await _dbContext.Ports.Where(x => x.Identifier == groupedByIdentifier[i].Key).ToListAsync();
+                var Ports = GetPortsListForState(model, ListPort);
 
                 DateTime VerifyDate = GetVerifyDate(model, Ports);
 
+                PortOne? searchedPort = null;
 
                 var verifyDatePorts = await _dbContext.Ports.Where(x => x.VTBegin == VerifyDate).ToListAsync();
 
@@ -132,7 +116,7 @@ namespace Business.Services
 
                     if (model.State == States.BASELINE)
                     {
-                        var maxSNPort = PortIdentityList[j].Where(x => x.Interpretation == Delta.PermDelta)
+                        var maxSNPort = ListPort.Where(x => x.Interpretation == Delta.PermDelta)
                             .OrderByDescending(x => x.SequenceNumber).FirstOrDefault();
 
 
@@ -154,7 +138,7 @@ namespace Business.Services
                         if(verifyTempDeltaPort == null)
                             searchedPort.VTEnd = VTBDateGreatFromEffectiveDatePort != null ? VTBDateGreatFromEffectiveDatePort.VTBegin : null;
 
-                        var maxSNPort = PortIdentityList[j].Where(x => x.Interpretation == Delta.PermDelta)
+                        var maxSNPort = ListPort.Where(x => x.Interpretation == Delta.PermDelta)
                             .OrderByDescending(x => x.SequenceNumber).FirstOrDefault();
 
                         if (maxSNPort.LTEnd != null)
@@ -230,7 +214,7 @@ namespace Business.Services
             await _dbContext.SaveChangesAsync();
         }
 
-        private int GetMaxSqNumber(List<PortOne> PortList)
+        private int GetMaxSequenceNumber(List<PortOne> PortList)
         {
             int maxSN = 0;
             for (int i = 0; i < PortList.Count; i++)
@@ -242,7 +226,7 @@ namespace Business.Services
             return maxSN;
         }
 
-        private void SetSNAndCN(PortEditDTO model, PortOne newEdit, PortOne EditPortTemp, PortOne EditedPort)
+        private void SetVersion(PortEditDTO model, PortOne newEdit, PortOne EditPortTemp, PortOne EditedPort)
         {
             if (model.Interpretation == Delta.TempDelta)
             {

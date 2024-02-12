@@ -12,8 +12,6 @@ namespace Business.Abstractions
     public interface IPortRepository
     {
         Task AddPort(PortAddDTO model);
-        Task<List<PortOne>> GetPorts();
-        Task<PortOne> GetPortById(int Id);
         Task EditPort(PortEditDTO model);
         Task<List<PortSearchUIDTO>> GetPorts(PortSearchDTO model);
         Task DecommissionPort(PortDecommissionDTO model);

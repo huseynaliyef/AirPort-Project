@@ -22,7 +22,7 @@ namespace Presentation.Controllers
             var IndexModel = new IndexViewModel();
             if(model.effectiveDate == default(DateTime))
             {
-                model = new PortSearchDTO { effectiveDate = DateTime.Now};
+                model = new PortSearchDTO { effectiveDate = DateTime.Today};
                 IndexModel.SearchedPorts = await _portRepository.GetPorts(model);
                 IndexModel.SearchDate = model.effectiveDate;
             }
