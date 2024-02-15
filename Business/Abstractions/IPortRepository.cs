@@ -13,7 +13,7 @@ namespace Business.Abstractions
     {
         Task AddPort(PortAddDTO model);
         Task EditPort(PortEditDTO model);
-        Task<List<PortSearchUIDTO>> GetPorts(PortSearchDTO model);
+        Task<List<PortDTO>> GetPorts(PortSearchDTO model);
         Task DecommissionPort(PortDecommissionDTO model);
     }
 }

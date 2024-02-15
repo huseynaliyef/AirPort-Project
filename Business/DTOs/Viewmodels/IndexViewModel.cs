@@ -8,7 +8,7 @@ namespace Business.DTOs.Viewmodels
 {
     public class IndexViewModel
     {
-        public List<PortSearchUIDTO>? SearchedPorts = new List<PortSearchUIDTO>();
+        public List<PortDTO>? SearchedPorts = new List<PortDTO>();
         public DateTime SearchDate { get; set; }
     }
 }

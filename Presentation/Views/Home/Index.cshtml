@@ -71,14 +71,14 @@
                     <th>@Port.Latitude</th>
                     <th>@Port.Longitude</th>
                     <th>@Port.CertificationDate</th>
-                    <th>@Port.Version</th>
+                    <th>@Port.TimeSlice</th>
                     
 
                     <form asp-controller="Home" asp-action="Edit" asp-route-Identifier="@Port.Identifier" asp-route-searchedDate="@Model.SearchDate.ToString("yyyy-MM-ddTHH:mm")" method="get">
                     <th><button type="submit" class="btn btn-info">Edit</button></th>
                     </form>
 
-                    @if (Port.Version.Split(' ')[1] == "BaseLine")
+                    @if (Port.TimeSlice.Split(' ')[1] == "BaseLine")
                     {
                         <form asp-controller="Home" asp-action="Decommission" asp-route-Identifier="@Port.Identifier" asp-route-searchedDate="@Model.SearchDate.ToString("yyyy-MM-ddTHH:mm")" method="get" id="decommissionForm">
                         <th><button type="submit" class="btn btn-danger">Decommission</button></th>

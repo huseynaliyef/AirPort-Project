@@ -20,16 +20,16 @@ namespace Presentation.Controllers
         public async Task<IActionResult> Index(PortSearchDTO model)
         {
             var IndexModel = new IndexViewModel();
-            if(model.effectiveDate == default(DateTime))
+            if(model.EffectiveDate == default(DateTime))
             {
-                model = new PortSearchDTO { effectiveDate = DateTime.Today};
+                model = new PortSearchDTO { EffectiveDate = DateTime.Today};
                 IndexModel.SearchedPorts = await _portRepository.GetPorts(model);
-                IndexModel.SearchDate = model.effectiveDate;
+                IndexModel.SearchDate = model.EffectiveDate;
             }
             else
             {
                 IndexModel.SearchedPorts = await _portRepository.GetPorts(model);
-                IndexModel.SearchDate = model.effectiveDate;
+                IndexModel.SearchDate = model.EffectiveDate;
             }
             return View(IndexModel);
         }
