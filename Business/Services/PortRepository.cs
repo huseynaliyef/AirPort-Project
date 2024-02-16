@@ -38,19 +38,20 @@ namespace Business.Services
             var permPort = permPortList.Where(x => x.SequenceNumber == GetMaxSequenceNumber(permPortList.ToList())).OrderByDescending(x => x.CorrectionNumber).FirstOrDefault();
             var editedPort = portList.Where(x => x.SequenceNumber == GetMaxSequenceNumber(portList.ToList())).OrderByDescending(x => x.CorrectionNumber).FirstOrDefault();
 
-            var newEdit = new PortOne();
-            newEdit.Identifier = model.Identifier;
-            newEdit.Name = model.Name;
-            newEdit.Latitude = model.Latitude;
-            newEdit.Longitude = model.Longitude;
-            newEdit.CertificationDate = editedPort?.CertificationDate is null ? permPort.CertificationDate : editedPort?.CertificationDate;
-            newEdit.SequenceNumber = 0;
-            newEdit.CorrectionNumber = 0;
-            newEdit.LTBegin = permPort.LTBegin;
-            newEdit.LTEnd = permPort.LTEnd;
-            newEdit.VTBegin = model.EffectiveDate;
-            newEdit.VTEnd = model.EndEffectiveDate;
-            newEdit.Interpretation = model.Interpretation;
+            var newEdit = new PortOne
+            {
+                Identifier = model.Identifier,
+                Name = model.Name,
+                Latitude = model.Latitude,
+                Longitude = model.Longitude,
+                SequenceNumber = 0,
+                CorrectionNumber = 0,
+                LTBegin = permPort.LTBegin,
+                LTEnd = permPort.LTEnd,
+                VTBegin = model.EffectiveDate,
+                VTEnd = model.EndEffectiveDate,
+                Interpretation = model.Interpretation
+            };
 
             SetVersion(model, newEdit, editedPort);
 
@@ -77,76 +78,41 @@ namespace Business.Services
                 else
                     ports = ports.Where(x => x.Interpretation == Delta.PermDelta || x.VTEnd >= model.EffectiveDate).ToList();
 
-                var dto = new PortDTO();
+                var port = new PortOne();
 
-                // apply all perm deltas from past to future
-                // apply all temp deltas from past to future
-                // set version for dto
+                if (ports.Any())
+                {
+                    port = ports.Where(x=>x.LTEnd == null).LastOrDefault();
+                    var decommissionedPort = ports.Where(x => x.LTEnd != null && x.LTEnd < model.EffectiveDate).FirstOrDefault();
 
-                result.Add(dto);
+                    if (model.State == States.SNAPSHOT)
+                    {
+                        var tempPort = ports.Where(x => x.Interpretation == Delta.TempDelta).LastOrDefault();
+                        port = tempPort != null ? tempPort : port;
+                    }
 
-                var verifyDate = GetVerifyDate(model, ports);
-                
-                //PortOne? searchedPort = null;
+                    SetEndDate(model, port, group);
+                    SetValueToNullData(port, ports);
 
-                //var verifyTempDeltaPort = ports.Where(x => x.VTBegin <= verifyDate && x.VTEnd >= verifyDate && x.Interpretation == Delta.TempDelta)
-                //                               .OrderByDescending(x => x.CorrectionNumber)
-                //                               .FirstOrDefault();
+                    if (decommissionedPort != null)
+                        port = decommissionedPort;
 
-                //var lastSearchdPorts = ports.Where(x => x.VTBegin == verifyDate).OrderByDescending(x => x.CorrectionNumber);
-
-                //if (lastSearchdPorts.Any())
-                //{
-                //    if(model.State == States.BASELINE)
-                //        searchedPort = lastSearchdPorts.FirstOrDefault();
-
-                //    else if(model.State == States.SNAPSHOT)
-                //        searchedPort = verifyTempDeltaPort != null ? verifyTempDeltaPort : lastSearchdPorts.FirstOrDefault();
-
-                //    var vtbDateGreatFromEffectiveDatePort = await _dbContext.Ports
-                //        .Where(x => x.VTBegin > searchedPort.VTBegin && x.Interpretation == Delta.PermDelta && model.State == States.BASELINE ||
-                //        x.VTBegin > searchedPort.VTBegin && model.State == States.SNAPSHOT)
-                //        .OrderBy(x => x.VTBegin).ThenBy(x => x.CorrectionNumber).FirstOrDefaultAsync();
-
-                //    SetValueToNullData(verifyDate, searchedPort, ports);
-
-                //    if (model.State == States.BASELINE)
-                //    {
-                //        var maxSNPort = ports.Where(x => x.Interpretation == Delta.PermDelta)
-                //            .OrderByDescending(x => x.SequenceNumber).FirstOrDefault();
-
-                //        searchedPort.VTEnd = vtbDateGreatFromEffectiveDatePort != null ? vtbDateGreatFromEffectiveDatePort.VTBegin : null;
-                //        searchedPort.LTEnd = maxSNPort?.LTEnd;
-
-                //    }
-                //    else if(model.State == States.SNAPSHOT)
-                //    {
-                //        searchedPort.VTEnd = verifyTempDeltaPort != null ? verifyTempDeltaPort.VTEnd : (vtbDateGreatFromEffectiveDatePort != null ? vtbDateGreatFromEffectiveDatePort.VTBegin : null);
-
-                //        var maxSNPort = ports.Where(x => x.Interpretation == Delta.PermDelta)
-                //            .OrderByDescending(x => x.SequenceNumber).FirstOrDefault();
-
-                //        searchedPort.LTEnd = maxSNPort?.LTEnd != null ? maxSNPort.LTEnd : null;
-
-                //    }
-
-                //    if (searchedPort.LTEnd > model.EffectiveDate || searchedPort.LTEnd == null)
-                //    {
-                //        var version = GetVersion(searchedPort);
-
-                //        result.Add(
-                //            new PortDTO
-                //            {
-                //                Id = searchedPort.Id,
-                //                Identifier = searchedPort.Identifier,
-                //                Name = searchedPort.Name,
-                //                Latitude = searchedPort.Latitude,
-                //                Longitude = searchedPort.Longitude,
-                //                CertificationDate = searchedPort.CertificationDate,
-                //                TimeSlice = version,
-                //            });
-                //    }
-                //}
+                    if (port.LTEnd > model.EffectiveDate || port.LTEnd == null)
+                    {
+                        var version = GetVersion(port);
+                        result.Add(
+                            new PortDTO
+                            {
+                                Id = port.Id,
+                                Identifier = port.Identifier,
+                                Name = port.Name,
+                                Latitude = port.Latitude,
+                                Longitude = port.Longitude,
+                                CertificationDate = port.CertificationDate,
+                                TimeSlice = version,
+                            });
+                    }
+                }
             }
 
             return result;
@@ -167,6 +133,7 @@ namespace Business.Services
                 port.SequenceNumber++;
                 port.CorrectionNumber = 0;
             }
+            port.LTBegin = model.EffectiveDate;
             port.LTEnd = model.EffectiveDate;
             port.Name = null;
             port.Latitude = null;
@@ -213,96 +180,98 @@ namespace Business.Services
             }
         }
 
-        private string GetVersion(PortOne searchedPort)
+        private string GetVersion(PortOne port)
         {
             var version = "";
-            if (searchedPort.Interpretation == Delta.PermDelta)
+            if (port.Interpretation == Delta.PermDelta)
             {
-                version = $"{searchedPort.SequenceNumber}.{searchedPort.CorrectionNumber} BaseLine from {searchedPort.VTBegin}";
+                version = $"{port.SequenceNumber}.{port.CorrectionNumber} BaseLine from {port.VTBegin}";
 
-                if (searchedPort.VTEnd != null)
-                    version += $" to {searchedPort.VTEnd}";
+                if (port.VTEnd != null)
+                    version += $" to {port.VTEnd}";
 
-                else if (searchedPort.VTEnd == null && searchedPort.LTEnd != null)
-                    version += $" to {searchedPort.LTEnd}";
+                else if (port.VTEnd == null && port.LTEnd != null)
+                    version += $" to {port.LTEnd}";
 
             }
-            else if (searchedPort.Interpretation == Delta.TempDelta)
+            else if (port.Interpretation == Delta.TempDelta)
             {
-                searchedPort.VTEnd = searchedPort.LTEnd < searchedPort.VTEnd ? searchedPort.LTEnd : searchedPort.VTEnd;
-                version = $"{searchedPort.SequenceNumber}.{searchedPort.CorrectionNumber} SnapShot from {searchedPort.VTBegin} to {searchedPort.VTEnd}";
+                port.VTEnd = port.LTEnd < port.VTEnd ? port.LTEnd : port.VTEnd;
+                version = $"{port.SequenceNumber}.{port.CorrectionNumber} SnapShot from {port.VTBegin} to {port.VTEnd}";
             }
 
             return version;
         }
 
-        private DateTime GetVerifyDate(PortSearchDTO model, List<PortOne> ports)
+        private void SetValueToNullData(PortOne port, IEnumerable<PortOne> ports)
         {
-            DateTime verifyDate = model.EffectiveDate;
-
-            for (int i = 0; i < ports.Count; i++)
+            if (port.Name == null)
             {
-                if (ports[i].VTBegin > model.EffectiveDate)
-                    continue;
-
-                if (model.State == States.SNAPSHOT)
+                foreach (var d in ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
                 {
-                    if (ports[i].Interpretation == Delta.TempDelta && ports[i].VTBegin < model.EffectiveDate && ports[i].VTEnd > model.EffectiveDate || ports[i].VTEnd == model.EffectiveDate)
-                        verifyDate = ports[i].VTBegin;
-                    if (ports[i].Interpretation == Delta.PermDelta && ports[i].VTBegin < model.EffectiveDate)
-                        verifyDate = ports[i].VTBegin;
-                }
+                    if (d.Name != null && (d.VTEnd < port.VTBegin|| d.VTEnd == null))
+                    {
+                        port.Name = d.Name;
+                        break;
 
-                if (model.State == States.BASELINE && ports[i].VTBegin < model.EffectiveDate)
-                    verifyDate = ports[i].VTBegin;
-
-                if (ports[i].VTBegin == model.EffectiveDate)
-                {
-                    verifyDate = ports[i].VTBegin;
-                    break;
+                    }
                 }
             }
 
-            return verifyDate;
+            if (port.Latitude == null)
+            {
+                foreach (var d in ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
+                {
+                    if (d.Latitude != null && (d.VTEnd < port.VTBegin || d.VTEnd == null))
+                    {
+                        port.Latitude = d.Latitude;
+                        break;
+                    }
+                }
+            }
+
+            if (port.Longitude == null)
+            {
+                foreach (var d in ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
+                {
+                    if (d.Longitude != null && (d.VTEnd < port.VTBegin || d.VTEnd == null))
+                    {
+                        port.Longitude = d.Longitude;
+                        break;
+                    }
+                }
+            }
+
+            if (port.CertificationDate == null)
+            {
+                foreach (var d in ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
+                {
+                    if (d.CertificationDate != null && (d.VTEnd < port.VTBegin || d.VTEnd == null))
+                    {
+                        port.CertificationDate = d.CertificationDate;
+                        break;
+                    }
+                }
+            }
         }
 
-        private void SetValueToNullData(DateTime verifyDate, PortOne searchedPort, IEnumerable<PortOne> ports)
+        private void SetEndDate(PortSearchDTO model, PortOne port, IGrouping<Guid, PortOne> group)
         {
-            if (searchedPort.Name == null)
-            {
-                foreach (var d in ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
-                {
-                    if (d.Name != null && (d.VTEnd < verifyDate || d.VTEnd == null))
-                    {
-                        searchedPort.Name = d.Name;
-                        break;
+            var endValidTime = group.Where(x => x.VTBegin > port.VTBegin && x.Interpretation == Delta.PermDelta && model.State == States.BASELINE ||
+                        x.VTBegin > port.VTBegin && model.State == States.SNAPSHOT)
+                        .OrderBy(x => x.VTBegin).ThenBy(x => x.CorrectionNumber).FirstOrDefault()?.VTBegin;
 
-                    }
-                }
+            var endLifeTime = group.Where(x => x.LTEnd != null).FirstOrDefault()?.LTEnd;
+
+            if (model.State == States.BASELINE)
+            {
+                port.VTEnd = endValidTime != null ? endValidTime : null;
+                port.LTEnd = endLifeTime;
             }
-
-            if (searchedPort.Latitude == null)
+            else
             {
-                foreach (var d in ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
-                {
-                    if (d.Latitude != null && (d.VTEnd < verifyDate || d.VTEnd == null))
-                    {
-                        searchedPort.Latitude = d.Latitude;
-                        break;
-                    }
-                }
-            }
-
-            if (searchedPort.Longitude == null)
-            {
-                foreach (var d in ports.OrderByDescending(x => x.VTBegin).ThenByDescending(x => x.CorrectionNumber))
-                {
-                    if (d.Longitude != null && (d.VTEnd < verifyDate || d.VTEnd == null))
-                    {
-                        searchedPort.Longitude = d.Longitude;
-                        break;
-                    }
-                }
+                port.VTEnd = port.Interpretation == Delta.TempDelta ? port.VTEnd : (endValidTime != null ? endValidTime : null); 
+                port.LTEnd = endLifeTime != null ? endLifeTime : null;
             }
         }
     }
