@@ -257,8 +257,8 @@ namespace Business.Services
 
         private void SetEndDate(PortSearchDTO model, PortOne port, IGrouping<Guid, PortOne> group)
         {
-            var endValidTime = group.Where(x => x.VTBegin > port.VTBegin && x.Interpretation == Delta.PermDelta && model.State == States.BASELINE ||
-                        x.VTBegin > port.VTBegin && model.State == States.SNAPSHOT)
+            var endValidTime = group.Where(x => x.VTBegin > model.EffectiveDate && x.Interpretation == Delta.PermDelta && model.State == States.BASELINE ||
+                        x.VTBegin > model.EffectiveDate && model.State == States.SNAPSHOT)
                         .OrderBy(x => x.VTBegin).ThenBy(x => x.CorrectionNumber).FirstOrDefault()?.VTBegin;
 
             var endLifeTime = group.Where(x => x.LTEnd != null).FirstOrDefault()?.LTEnd;
