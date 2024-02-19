@@ -75,9 +75,10 @@ namespace Business.Services
                 // 1. Ignore old corrections
                 // 2. All temporary deltas if model.State is Baseline
                 // 3. Temporary deltas which validity finished in past if model.State is Snapshot
-                var allEvents = group;
+                var allEvents = FilterEventsByOldCorrection(group);
+                var allFilteredEvents = FilterEventsByState(allEvents, model);
 
-                var toBeAppliedEvents = allEvents.Where(x => x.VTBegin <= model.EffectiveDate).ToList();
+                var toBeAppliedEvents = allFilteredEvents.Where(x => x.VTBegin <= model.EffectiveDate).ToList();
 
                 if (model.State == States.BASELINE)
                     toBeAppliedEvents = toBeAppliedEvents.Where(x => x.Interpretation == Delta.PermDelta).ToList();
@@ -89,7 +90,7 @@ namespace Business.Services
 
                 var portState = CreateAndApplyPort(toBeAppliedEvents);
 
-                SetEndDate(model, portState, allEvents);
+                SetEndDate(model, portState, allFilteredEvents);
 
                 if (portState.LTEnd != null && portState.LTEnd < model.EffectiveDate)
                     continue;
@@ -198,9 +199,10 @@ namespace Business.Services
             var port = new PortOne();
 
             // TODO: order by interpretation, firstly we should apply permanent deltas, then temporary deltas
-            var orderedPorts = ports.OrderBy(x => x.VTBegin);
+            var orderByInterpretation = ports.OrderBy(x=>x.Interpretation).ThenBy(x=>x.VTBegin);
 
-            foreach (var d in orderedPorts)
+
+            foreach (var d in orderByInterpretation)
             {
                 if (d.Name != null)
                 {
@@ -223,6 +225,45 @@ namespace Business.Services
                 }
 
                 // TODO: Set interpretation, sequence, correction, valid time begin
+                if(d.Interpretation != null)
+                {
+                    port.Interpretation = d.Interpretation;
+                }
+                if(d.Identifier != null)
+                {
+                    port.Identifier = d.Identifier;
+                }
+
+                if(d.SequenceNumber != null)
+                {
+                    port.SequenceNumber = d.SequenceNumber;
+                }
+
+                if(d.CorrectionNumber != null)
+                {
+                    port.CorrectionNumber = d.CorrectionNumber;
+                }
+
+                if (d.VTBegin != null)
+                {
+                    port.VTBegin = d.VTBegin;
+                }
+
+                if (d.VTEnd != null)
+                {
+                    port.VTEnd = d.VTEnd;
+                }
+
+                if (d.LTBegin != null)
+                {
+                    port.LTBegin = d.LTBegin;
+                }
+
+                if (d.LTEnd != null)
+                {
+                    port.LTEnd = d.LTEnd;
+                }
+
             }
 
             return port;
@@ -249,6 +290,30 @@ namespace Business.Services
             {
                 port.VTEnd = nextBeginValidTime;
             }
+        }
+        private List<PortOne> FilterEventsByOldCorrection(IEnumerable<PortOne> group)
+        {
+            var groupedFeatureByInterpretation = group.GroupBy(x => x.Interpretation).ToList();
+            var eventsList = new List<PortOne>();
+            foreach (var ifeature in groupedFeatureByInterpretation)
+            {
+                var groupedFeatureBySequence = ifeature.GroupBy(x => x.SequenceNumber).ToList();
+                foreach (var sfeature in groupedFeatureBySequence)
+                {
+                    eventsList.Add(sfeature.OrderByDescending(x => x.CorrectionNumber).FirstOrDefault());
+
+                }
+            }
+
+            return eventsList;
+        }
+
+        public List<PortOne> FilterEventsByState(IEnumerable<PortOne> group, PortSearchDTO model)
+        {
+            if (model.State == States.BASELINE)
+                return group.Where(x => x.Interpretation == Delta.PermDelta).ToList();
+            else
+                return group.Where(x => x.VTEnd > model.EffectiveDate || x.VTEnd == null).ToList();
         }
     }
 }
