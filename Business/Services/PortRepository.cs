@@ -71,10 +71,6 @@ namespace Business.Services
 
             foreach (var group in groupedByIdentifier)
             {
-                // TODO:
-                // 1. Ignore old corrections
-                // 2. All temporary deltas if model.State is Baseline
-                // 3. Temporary deltas which validity finished in past if model.State is Snapshot
                 var allEvents = FilterEventsByOldCorrection(group);
                 var allFilteredEvents = FilterEventsByState(allEvents, model);
 
@@ -197,10 +193,7 @@ namespace Business.Services
         private PortOne CreateAndApplyPort(IEnumerable<PortOne> ports)
         {
             var port = new PortOne();
-
-            // TODO: order by interpretation, firstly we should apply permanent deltas, then temporary deltas
             var orderByInterpretation = ports.OrderBy(x=>x.Interpretation).ThenBy(x=>x.VTBegin);
-
 
             foreach (var d in orderByInterpretation)
             {
@@ -224,7 +217,6 @@ namespace Business.Services
                     port.CertificationDate = d.CertificationDate;
                 }
 
-                // TODO: Set interpretation, sequence, correction, valid time begin
                 if(d.Interpretation != null)
                 {
                     port.Interpretation = d.Interpretation;
