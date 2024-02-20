@@ -181,17 +181,7 @@ namespace Business.Services
 
             foreach (var appliedEvent in orderedAppliedEvents)
             {
-                var properties = typeof(PortOne).GetProperties();
-                foreach(var property in properties)
-                {
-                    var appliedEventProperty = appliedEvent.GetType().GetProperty(property.Name);
-                    if(appliedEventProperty != null)
-                    {
-                        var value = appliedEventProperty.GetValue(appliedEvent);
-                        if (value != null)
-                            property.SetValue(port, value);
-                    }
-                }
+                SetData(appliedEvent, port);
 
                 port.Identifier = appliedEvent.Identifier;
                 port.Interpretation = appliedEvent.Interpretation;
@@ -263,6 +253,20 @@ namespace Business.Services
                 return group.Where(x => x.VTEnd == null || x.VTEnd >= model.EffectiveDate).ToList();
         }
 
+        private void SetData(PortOne appliedEvent, PortOne port)
+        {
+            var properties = typeof(PortOne).GetProperties();
+            foreach (var property in properties)
+            {
+                var appliedEventProperty = appliedEvent.GetType().GetProperty(property.Name);
+                if (appliedEventProperty != null)
+                {
+                    var value = appliedEventProperty.GetValue(appliedEvent);
+                    if (value != null)
+                        property.SetValue(port, value);
+                }
+            }
+        }
         #endregion
     }
 }
