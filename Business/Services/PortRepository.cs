@@ -131,6 +131,8 @@ namespace Business.Services
             await _dbContext.SaveChangesAsync();
         }
 
+        #region private methods
+
         private int GetMaxSequenceNumber(List<PortOne> portList)
         {
             int maxSN = 0;
@@ -275,12 +277,14 @@ namespace Business.Services
             return eventsList;
         }
 
-        public List<PortOne> FilterEventsByState(IEnumerable<PortOne> group, PortSearchDTO model)
+        private List<PortOne> FilterEventsByState(IEnumerable<PortOne> group, PortSearchDTO model)
         {
             if (model.State == States.BASELINE)
                 return group.Where(x => x.Interpretation == Delta.PermDelta).ToList();
             else
                 return group.Where(x => x.VTEnd == null || x.VTEnd >= model.EffectiveDate).ToList();
         }
+
+        #endregion
     }
 }
