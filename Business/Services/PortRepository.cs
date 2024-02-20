@@ -186,72 +186,42 @@ namespace Business.Services
             }
         }
 
-        private PortOne CreateAndApplyPort(IEnumerable<PortOne> ports)
+        private PortOne CreateAndApplyPort(IEnumerable<PortOne> appliedEvents)
         {
             var port = new PortOne();
-            var orderByInterpretation = ports.OrderBy(x=>x.Interpretation).ThenBy(x=>x.VTBegin);
+            var orderedAppliedEvents = appliedEvents.OrderBy(x => x.Interpretation).ThenBy(x => x.VTBegin);
 
-            foreach (var d in orderByInterpretation)
+            foreach (var appliedEvent in orderedAppliedEvents)
             {
-                if (d.Name != null)
+                if (appliedEvent.Name != null)
                 {
-                    port.Name = d.Name;
+                    port.Name = appliedEvent.Name;
                 }
 
-                if (d.Latitude != null)
+                if (appliedEvent.Latitude != null)
                 {
-                    port.Latitude = d.Latitude;
+                    port.Latitude = appliedEvent.Latitude;
                 }
 
-                if (d.Longitude != null)
+                if (appliedEvent.Longitude != null)
                 {
-                    port.Longitude = d.Longitude;
+                    port.Longitude = appliedEvent.Longitude;
                 }
 
-                if (d.CertificationDate != null)
+                if (appliedEvent.CertificationDate != null)
                 {
-                    port.CertificationDate = d.CertificationDate;
+                    port.CertificationDate = appliedEvent.CertificationDate;
                 }
 
-                if(d.Interpretation != null)
-                {
-                    port.Interpretation = d.Interpretation;
-                }
-                if(d.Identifier != null)
-                {
-                    port.Identifier = d.Identifier;
-                }
+                port.Identifier = appliedEvent.Identifier;
+                port.Interpretation = appliedEvent.Interpretation;
+                port.SequenceNumber = appliedEvent.SequenceNumber;
+                port.CorrectionNumber = appliedEvent.CorrectionNumber;
 
-                if(d.SequenceNumber != null)
-                {
-                    port.SequenceNumber = d.SequenceNumber;
-                }
-
-                if(d.CorrectionNumber != null)
-                {
-                    port.CorrectionNumber = d.CorrectionNumber;
-                }
-
-                if (d.VTBegin != null)
-                {
-                    port.VTBegin = d.VTBegin;
-                }
-
-                if (d.VTEnd != null)
-                {
-                    port.VTEnd = d.VTEnd;
-                }
-
-                if (d.LTBegin != null)
-                {
-                    port.LTBegin = d.LTBegin;
-                }
-
-                if (d.LTEnd != null)
-                {
-                    port.LTEnd = d.LTEnd;
-                }
-
+                port.VTBegin = appliedEvent.VTBegin;
+                port.VTEnd = appliedEvent.VTEnd;
+                port.LTBegin = appliedEvent.LTBegin;
+                port.LTEnd = appliedEvent.LTEnd;
             }
 
             return port;
