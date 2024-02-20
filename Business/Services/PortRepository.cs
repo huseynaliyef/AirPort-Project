@@ -35,11 +35,11 @@ namespace Business.Services
 
         public async Task EditPort(PortEditDTO model)
         {
-            var portList = _dbContext.Ports.AsQueryable().Where(x => x.Identifier == model.Identifier && x.Interpretation == model.Interpretation);
-            var permPortList = _dbContext.Ports.AsQueryable().Where(x => x.Identifier == model.Identifier && x.Interpretation == Delta.PermDelta);
+            var allPortevents = _dbContext.Ports.Where(x => x.Identifier == model.Identifier);
 
-            var permPort = permPortList.Where(x => x.SequenceNumber == GetMaxSequenceNumber(permPortList.ToList())).OrderByDescending(x => x.CorrectionNumber).FirstOrDefault();
-            var editedPort = portList.Where(x => x.SequenceNumber == GetMaxSequenceNumber(portList.ToList())).OrderByDescending(x => x.CorrectionNumber).FirstOrDefault();
+            var allFilteredPortevents = FilterEventsByOldCorrection(allPortevents.Where(x=>x.Interpretation == model.Interpretation));
+
+            var editedPort = allFilteredPortevents.LastOrDefault();
 
             var newEdit = new PortOne
             {
@@ -49,8 +49,7 @@ namespace Business.Services
                 Longitude = model.Longitude,
                 SequenceNumber = 0,
                 CorrectionNumber = 0,
-                LTBegin = permPort.LTBegin,
-                LTEnd = permPort.LTEnd,
+                LTBegin = allPortevents.First().LTBegin,
                 VTBegin = model.EffectiveDate,
                 VTEnd = model.EndEffectiveDate,
                 Interpretation = model.Interpretation
@@ -107,9 +106,9 @@ namespace Business.Services
         public async Task DecommissionPort(PortDecommissionDTO model)
         {
             var portList = _dbContext.Ports.AsQueryable().Where(x=>x.Identifier == model.Identifier);
-            int maxSN = GetMaxSequenceNumber(portList.ToList());
-
-            var port = portList.Where(x=>x.SequenceNumber == maxSN).OrderByDescending(x=>x.CorrectionNumber).FirstOrDefault();
+            
+            var port = FilterEventsByOldCorrection(portList).Last();
+            
             if(port.VTBegin == model.EffectiveDate)
             {
                 port.CorrectionNumber++;
@@ -132,19 +131,6 @@ namespace Business.Services
         }
 
         #region private methods
-
-        private int GetMaxSequenceNumber(List<PortOne> portList)
-        {
-            int maxSN = 0;
-            for (int i = 0; i < portList.Count; i++)
-            {
-                if (portList[i].SequenceNumber > maxSN)
-                    maxSN = portList[i].SequenceNumber;
-
-            }
-            return maxSN;
-        }
-
         private void SetVersion(PortEditDTO model, PortOne newEdit, PortOne editedPort)
         {
             if (editedPort == null)
@@ -195,24 +181,16 @@ namespace Business.Services
 
             foreach (var appliedEvent in orderedAppliedEvents)
             {
-                if (appliedEvent.Name != null)
+                var properties = typeof(PortOne).GetProperties();
+                foreach(var property in properties)
                 {
-                    port.Name = appliedEvent.Name;
-                }
-
-                if (appliedEvent.Latitude != null)
-                {
-                    port.Latitude = appliedEvent.Latitude;
-                }
-
-                if (appliedEvent.Longitude != null)
-                {
-                    port.Longitude = appliedEvent.Longitude;
-                }
-
-                if (appliedEvent.CertificationDate != null)
-                {
-                    port.CertificationDate = appliedEvent.CertificationDate;
+                    var appliedEventProperty = appliedEvent.GetType().GetProperty(property.Name);
+                    if(appliedEventProperty != null)
+                    {
+                        var value = appliedEventProperty.GetValue(appliedEvent);
+                        if (value != null)
+                            property.SetValue(port, value);
+                    }
                 }
 
                 port.Identifier = appliedEvent.Identifier;
