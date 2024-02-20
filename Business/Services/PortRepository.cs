@@ -13,9 +13,11 @@ namespace Business.Services
         {
             _dbContext = dbContext;
         }
+
         public async Task AddPort(PortAddDTO model)
         {
             var newPort = new PortOne();
+
             newPort.Identifier = Guid.NewGuid();
             newPort.Name = model.Name;
             newPort.Latitude = model.Latitude;
@@ -26,6 +28,7 @@ namespace Business.Services
             newPort.Interpretation = Delta.PermDelta;
             newPort.SequenceNumber = 1;
             newPort.CorrectionNumber = 0;
+
             await _dbContext.Ports.AddAsync(newPort);
             await _dbContext.SaveChangesAsync();
         }
@@ -57,7 +60,6 @@ namespace Business.Services
 
             await _dbContext.Ports.AddAsync(newEdit);
             await _dbContext.SaveChangesAsync();
-
         }
 
         public async Task<List<PortDTO>> GetPorts(PortSearchDTO model)
@@ -71,22 +73,16 @@ namespace Business.Services
 
             foreach (var group in groupedByIdentifier)
             {
-                var allEvents = FilterEventsByOldCorrection(group);
-                var allFilteredEvents = FilterEventsByState(allEvents, model);
+                var allEvents = FilterEvents(group, model);
 
-                var toBeAppliedEvents = allFilteredEvents.Where(x => x.VTBegin <= model.EffectiveDate).ToList();
-
-                if (model.State == States.BASELINE)
-                    toBeAppliedEvents = toBeAppliedEvents.Where(x => x.Interpretation == Delta.PermDelta).ToList();
-                else
-                    toBeAppliedEvents = toBeAppliedEvents.Where(x => x.Interpretation == Delta.PermDelta || x.VTEnd >= model.EffectiveDate).ToList();
+                var toBeAppliedEvents = allEvents.Where(x => x.VTBegin <= model.EffectiveDate).ToList();
 
                 if (toBeAppliedEvents.Count == 0)
                     continue;
 
                 var portState = CreateAndApplyPort(toBeAppliedEvents);
 
-                SetEndDate(model, portState, allFilteredEvents);
+                SetEndDate(model, portState, allEvents);
 
                 if (portState.LTEnd != null && portState.LTEnd < model.EffectiveDate)
                     continue;
@@ -264,7 +260,8 @@ namespace Business.Services
         private void SetEndDate(PortSearchDTO model, PortOne port, IEnumerable<PortOne> ports)
         {
             var nextBeginValidTime = ports.OrderBy(x => x.VTBegin)
-                                    .FirstOrDefault(x => x.VTBegin > model.EffectiveDate)?.VTBegin;
+                                          .FirstOrDefault(x => x.VTBegin > model.EffectiveDate)?
+                                          .VTBegin;
 
             var endLifeTime = ports.FirstOrDefault(x => x.LTEnd != null)?.LTEnd;
 
@@ -283,18 +280,26 @@ namespace Business.Services
                 port.VTEnd = nextBeginValidTime;
             }
         }
+
+        private List<PortOne> FilterEvents(IEnumerable<PortOne> group, PortSearchDTO model)
+        {
+            var maxCorrectionEvents = FilterEventsByOldCorrection(group);
+
+            var filteredEvents = FilterEventsByState(maxCorrectionEvents, model);
+
+            return filteredEvents;
+        }
+
         private List<PortOne> FilterEventsByOldCorrection(IEnumerable<PortOne> group)
         {
-            var groupedFeatureByInterpretation = group.GroupBy(x => x.Interpretation).ToList();
+            var featureGroups = group.GroupBy(x => new { x.Interpretation, x.SequenceNumber }).ToList();
             var eventsList = new List<PortOne>();
-            foreach (var ifeature in groupedFeatureByInterpretation)
-            {
-                var groupedFeatureBySequence = ifeature.GroupBy(x => x.SequenceNumber).ToList();
-                foreach (var sfeature in groupedFeatureBySequence)
-                {
-                    eventsList.Add(sfeature.OrderByDescending(x => x.CorrectionNumber).FirstOrDefault());
 
-                }
+            foreach (var featureGroup in featureGroups)
+            {
+                var featureEvent = featureGroup.OrderByDescending(x => x.CorrectionNumber).First();
+
+                eventsList.Add(featureEvent);
             }
 
             return eventsList;
@@ -305,7 +310,7 @@ namespace Business.Services
             if (model.State == States.BASELINE)
                 return group.Where(x => x.Interpretation == Delta.PermDelta).ToList();
             else
-                return group.Where(x => x.VTEnd > model.EffectiveDate || x.VTEnd == null).ToList();
+                return group.Where(x => x.VTEnd == null || x.VTEnd >= model.EffectiveDate).ToList();
         }
     }
 }
