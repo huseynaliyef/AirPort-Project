@@ -37,7 +37,7 @@ namespace Business.Services
         {
             var allEvents = _dbContext.Ports.Where(x => x.Identifier == model.Identifier);
 
-            var maxSequenceNumber = allEvents.Any() ? allEvents.Max(x => x.SequenceNumber) : 0;
+            var maxSequenceNumber = allEvents.Where(x=>x.Interpretation == model.Interpretation).Any() ? allEvents.Max(x => x.SequenceNumber) : 0;
 
             var editedPort = allEvents.FirstOrDefault(x => x.Interpretation == model.Interpretation && x.VTBegin == model.EffectiveDate && x.VTEnd == model.EndEffectiveDate);
 
@@ -107,9 +107,12 @@ namespace Business.Services
         {
             var portList = _dbContext.Ports.AsQueryable().Where(x=>x.Identifier == model.Identifier);
             
-            var port = FilterEventsByOldCorrection(portList).Last();
-            
-            if(port.VTBegin == model.EffectiveDate)
+            var maxSequenceNumber = portList.Max(x => x.SequenceNumber);
+
+            var port = FilterEventsByOldCorrection(portList).FirstOrDefault(x=>x.SequenceNumber == maxSequenceNumber);
+
+
+            if (port.VTBegin == model.EffectiveDate)
             {
                 port.CorrectionNumber++;
             }
@@ -118,6 +121,7 @@ namespace Business.Services
                 port.SequenceNumber++;
                 port.CorrectionNumber = 0;
             }
+
             port.LTBegin = model.EffectiveDate;
             port.LTEnd = model.EffectiveDate;
             port.Name = null;
@@ -177,9 +181,6 @@ namespace Business.Services
 
                 port.Identifier = appliedEvent.Identifier;
                 port.Interpretation = appliedEvent.Interpretation;
-                port.SequenceNumber = appliedEvent.SequenceNumber;
-                port.CorrectionNumber = appliedEvent.CorrectionNumber;
-
                 port.VTBegin = appliedEvent.VTBegin;
                 port.VTEnd = appliedEvent.VTEnd;
                 port.LTBegin = appliedEvent.LTBegin;
@@ -250,12 +251,20 @@ namespace Business.Services
             var properties = typeof(PortOne).GetProperties();
             foreach (var property in properties)
             {
+                if (appliedEvent.LTEnd != null)
+                    continue;
+
                 var appliedEventProperty = appliedEvent.GetType().GetProperty(property.Name);
+
                 if (appliedEventProperty != null)
                 {
                     var value = appliedEventProperty.GetValue(appliedEvent);
                     if (value != null)
-                        property.SetValue(port, value);
+                    {
+                        
+                            property.SetValue(port, value);
+
+                    }
                 }
             }
         }
