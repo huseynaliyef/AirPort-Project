@@ -35,11 +35,11 @@ namespace Business.Services
 
         public async Task EditPort(PortEditDTO model)
         {
-            var allPortevents = _dbContext.Ports.Where(x => x.Identifier == model.Identifier);
+            var allEvents = _dbContext.Ports.Where(x => x.Identifier == model.Identifier);
 
-            var allFilteredPortevents = FilterEventsByOldCorrection(allPortevents.Where(x=>x.Interpretation == model.Interpretation));
+            var maxSequenceNumber = allEvents.Any() ? allEvents.Max(x => x.SequenceNumber) : 0;
 
-            var editedPort = allFilteredPortevents.LastOrDefault();
+            var editedPort = allEvents.FirstOrDefault(x => x.Interpretation == model.Interpretation && x.VTBegin == model.EffectiveDate && x.VTEnd == model.EndEffectiveDate);
 
             var newEdit = new PortOne
             {
@@ -49,13 +49,13 @@ namespace Business.Services
                 Longitude = model.Longitude,
                 SequenceNumber = 0,
                 CorrectionNumber = 0,
-                LTBegin = allPortevents.First().LTBegin,
+                LTBegin = allEvents.First().LTBegin,
                 VTBegin = model.EffectiveDate,
                 VTEnd = model.EndEffectiveDate,
                 Interpretation = model.Interpretation
             };
 
-            SetVersion(model, newEdit, editedPort);
+            SetVersion(newEdit, editedPort, maxSequenceNumber);
 
             await _dbContext.Ports.AddAsync(newEdit);
             await _dbContext.SaveChangesAsync();
@@ -131,26 +131,18 @@ namespace Business.Services
         }
 
         #region private methods
-        private void SetVersion(PortEditDTO model, PortOne newEdit, PortOne editedPort)
+
+        private void SetVersion(PortOne newEdit, PortOne editedPort, int maxSequenceNumber)
         {
             if (editedPort == null)
             {
-                newEdit.VTBegin = model.EffectiveDate;
-                newEdit.VTEnd = model.EndEffectiveDate;
-                newEdit.SequenceNumber = 1;
+                newEdit.SequenceNumber = maxSequenceNumber + 1;
                 newEdit.CorrectionNumber = 0;
-            }
-            else if (editedPort.VTBegin == model.EffectiveDate)
-            {
-                newEdit.CorrectionNumber = editedPort.CorrectionNumber + 1;
-                newEdit.SequenceNumber = editedPort.SequenceNumber;
             }
             else
             {
-                newEdit.VTBegin = model.EffectiveDate;
-                newEdit.VTEnd = model.EndEffectiveDate;
-                newEdit.SequenceNumber = editedPort.SequenceNumber + 1;
-                newEdit.CorrectionNumber = 0;
+                newEdit.CorrectionNumber = editedPort.CorrectionNumber + 1;
+                newEdit.SequenceNumber = editedPort.SequenceNumber;
             }
         }
 
